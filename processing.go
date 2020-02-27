@@ -135,9 +135,6 @@ func grabTarget(input ScanTarget, m *Monitor) []byte {
 		if res.Error != nil && !config.Multiple.ContinueOnError {
 			break
 		}
-		if res.Status == SCAN_SUCCESS && config.Multiple.BreakOnSuccess {
-			break
-		}
 	}
 
 	var ipstr string
@@ -164,10 +161,11 @@ func grabTarget(input ScanTarget, m *Monitor) []byte {
 		}
 		outputData = stripped
 	}
-
 	result, err := json.Marshal(outputData)
 	if err != nil {
-		log.Fatalf("unable to marshal data: %s", err)
+		log.Info("IP failed: ", input.IP)
+		log.Errorf("unable to marshal data: %s", err)
+		return nil
 	}
 
 	return result
@@ -202,7 +200,9 @@ func Process(mon *Monitor) {
 			for obj := range processQueue {
 				for run := uint(0); run < uint(config.ConnectionsPerHost); run++ {
 					result := grabTarget(obj, mon)
-					outputQueue <- result
+					if result != nil {
+						outputQueue <- result
+					}
 				}
 			}
 			workerDone.Done()
